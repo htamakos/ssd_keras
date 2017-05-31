@@ -45,7 +45,7 @@ np.set_printoptions(suppress=True)
 path_prefix = './data/VOCdevkit/VOC2007/JPEGImages/'
 
 # Constants
-NUM_CLASSES = 4
+NUM_CLASSES = 21
 input_shape = (300, 300, 3)
 batch_size = 16
 
