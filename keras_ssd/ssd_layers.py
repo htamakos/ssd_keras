@@ -29,10 +29,7 @@ class Normalize(Layer):
         Add possibility to have one scale for all features.
     """
     def __init__(self, scale, **kwargs):
-        if K.image_dim_ordering() == 'tf':
-            self.axis = 3
-        else:
-            self.axis = 1
+        self.axis = 3
         self.scale = scale
         super(Normalize, self).__init__(**kwargs)
 
@@ -81,12 +78,8 @@ class PriorBox(Layer):
     """
     def __init__(self, img_size, min_size, max_size=None, aspect_ratios=None,
                  flip=True, variances=[0.1], clip=True, **kwargs):
-        if K.image_dim_ordering() == 'tf':
-            self.waxis = 2
-            self.haxis = 1
-        else:
-            self.waxis = 3
-            self.haxis = 2
+        self.waxis = 2
+        self.haxis = 1
         self.img_size = img_size
         if min_size <= 0:
             raise Exception('min_size must be positive.')
@@ -116,10 +109,7 @@ class PriorBox(Layer):
         return (input_shape[0], num_boxes, 8)
 
     def call(self, x, mask=None):
-        if hasattr(x, '_keras_shape'):
-            input_shape = x._keras_shape
-        elif hasattr(K, 'int_shape'):
-            input_shape = K.int_shape(x)
+        input_shape = K.int_shape(x)
         layer_width = input_shape[self.waxis]
         layer_height = input_shape[self.haxis]
         img_width = self.img_size[0]
@@ -172,10 +162,6 @@ class PriorBox(Layer):
             raise Exception('Must provide one or four variances.')
         prior_boxes = np.concatenate((prior_boxes, variances), axis=1)
         prior_boxes_tensor = K.expand_dims(K.variable(prior_boxes), 0)
-        if K.backend() == 'tensorflow':
-            pattern = [tf.shape(x)[0], 1, 1]
-            prior_boxes_tensor = tf.tile(prior_boxes_tensor, pattern)
-        elif K.backend() == 'theano':
-            #TODO
-            pass
+        pattern = [tf.shape(x)[0], 1, 1]
+        prior_boxes_tensor = tf.tile(prior_boxes_tensor, pattern)
         return prior_boxes_tensor

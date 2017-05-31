@@ -3,6 +3,7 @@ import numpy as np
 from random import shuffle
 from scipy.misc import imread
 from scipy.misc import imresize
+from tensorflow.contrib.keras.python.keras.applications.imagenet_utils import preprocess_input
 
 class Generator(object):
     def __init__(self, gt, bbox_util,

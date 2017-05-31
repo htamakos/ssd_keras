@@ -248,10 +248,7 @@ def SSD300(input_shape, num_classes=21):
     priorbox = PriorBox(img_size, 276.0, max_size=330.0, aspect_ratios=[2, 3],
                         variances=[0.1, 0.1, 0.2, 0.2],
                         name='pool6_mbox_priorbox')
-    if K.image_dim_ordering() == 'tf':
-        target_shape = (1, 1, 256)
-    else:
-        target_shape = (256, 1, 1)
+    target_shape = (1, 1, 256)
     net['pool6_reshaped'] = Reshape(target_shape,
                                     name='pool6_reshaped')(net['pool6'])
     net['pool6_mbox_priorbox'] = priorbox(net['pool6_reshaped'])
@@ -280,10 +277,7 @@ def SSD300(input_shape, num_classes=21):
                                   net['pool6_mbox_priorbox']],
                                  axis=1,
                                  name='mbox_priorbox')
-    if hasattr(net['mbox_loc'], '_keras_shape'):
-        num_boxes = net['mbox_loc']._keras_shape[-1] // 4
-    elif hasattr(net['mbox_loc'], 'int_shape'):
-        num_boxes = K.int_shape(net['mbox_loc'])[-1] // 4
+    num_boxes = K.int_shape(net['mbox_loc'])[-1] // 4
     net['mbox_loc'] = Reshape((num_boxes, 4),
                               name='mbox_loc_final')(net['mbox_loc'])
     net['mbox_conf'] = Reshape((num_boxes, num_classes),

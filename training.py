@@ -1,14 +1,15 @@
 # Standart module
+import os
 import pickle
 from random import shuffle
 
 # 3rd party module
 import cv2
-import keras
-from keras.applications.imagenet_utils import preprocess_input
-from keras.backend.tensorflow_backend import set_session
-from keras.models import Model
-from keras.preprocessing import image
+from tensorflow.contrib.keras.python.keras.applications.imagenet_utils import preprocess_input
+from tensorflow.contrib.keras.python.keras.models import Model
+from tensorflow.contrib.keras.python.keras.preprocessing import image
+from tensorflow.contrib.keras.python.keras.optimizers import Adam
+from tensorflow.contrib.keras.python.keras.callbacks import ModelCheckpoint, LearningRateScheduler
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.misc import imread
@@ -19,6 +20,7 @@ import tensorflow as tf
 from keras_ssd.ssd import SSD300
 from keras_ssd.ssd_training import MultiboxLoss
 from keras_ssd.ssd_utils import BBoxUtility
+from generators import Generator
 
 def load_data(file_path='VOC2007.pkl'):
     """function for using data from pkl file"""
@@ -28,7 +30,7 @@ def load_data(file_path='VOC2007.pkl'):
     train_keys = keys[:num_train]
     val_keys = keys[num_train:]
 
-    return train_keys, val_keys
+    return gt, train_keys, val_keys
 
 def schedule(epoch, decay=0.9):
     """function for LearningRateScheduler"""
@@ -45,16 +47,17 @@ path_prefix = './data/VOCdevkit/VOC2007/JPEGImages/'
 # Constants
 NUM_CLASSES = 4
 input_shape = (300, 300, 3)
+batch_size = 16
 
 # SSD config
 priors = pickle.load(open('prior_boxes_ssd300.pkl', 'rb'))
 bbox_util = BBoxUtility(NUM_CLASSES, priors)
 
 # Dataload
-train_keys, val_keys = load_data()
+gt, train_keys, val_keys = load_data()
 
 # Data generator
-gen = Generator(gt, bbox_util, 16, path_prefix,
+gen = Generator(gt, bbox_util, batch_size, path_prefix,
                 train_keys, val_keys,
                 (input_shape[0], input_shape[1]), do_crop=False)
 
@@ -75,18 +78,18 @@ for L in model.layers:
         L.trainable = False
 
 ## Callback Settings for keras
-callbacks = [keras.callbacks.ModelCheckpoint('./checkpoints/weights.{epoch:02d}-{val_loss:.2f}.hdf5',
+callbacks = [ModelCheckpoint('./checkpoints/weights.{epoch:02d}-{val_loss:.2f}.hdf5',
                                              verbose=1,
                                              save_weights_only=True),
-             keras.callbacks.LearningRateScheduler(schedule)]
+             LearningRateScheduler(schedule)]
 
-optim = keras.optimizers.Adam(lr=base_lr)
+optim = Adam(lr=base_lr)
 model.compile(optimizer=optim,
               loss=MultiboxLoss(NUM_CLASSES, neg_pos_ratio=2.0).compute_loss)
 
 history = model.fit_generator(gen.generate(True), gen.train_batches,
                               nb_epoch, verbose=1,
+                              workers=1,
                               callbacks=callbacks,
                               validation_data=gen.generate(False),
-                              nb_val_samples=gen.val_batches,
-                              nb_worker=1)
+                              validation_steps=gen.val_batches)
